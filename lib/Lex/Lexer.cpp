@@ -2617,6 +2617,9 @@ LexNextToken:
       Kind = tok::ellipsis;
       CurPtr = ConsumeChar(ConsumeChar(CurPtr, SizeTmp, Result),
                            SizeTmp2, Result);
+    } else if (Features.Eero && Char == '.') { // Eero accepts ".." too
+      Kind = tok::ellipsis;
+      CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
     } else {
       Kind = tok::period;
     }
