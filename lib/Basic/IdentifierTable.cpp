@@ -95,7 +95,8 @@ namespace {
     KEYOPENCL = 0x200,
     KEYC1X = 0x400,
     KEYARC = 0x800,
-    KEYALL = 0x0fff
+    KEYEERO = 0x1000,
+    KEYALL = 0xffff
   };
 }
 
@@ -125,6 +126,7 @@ static void AddKeyword(StringRef Keyword,
   else if (LangOpts.C1X && (Flags & KEYC1X)) AddResult = 2;
   else if (LangOpts.ObjCAutoRefCount && (Flags & KEYARC)) AddResult = 2;
   else if (LangOpts.CPlusPlus && (Flags & KEYCXX0X)) AddResult = 3;
+  else if (LangOpts.Eero && (Flags & KEYEERO)) AddResult = 2;
 
   // Don't add this keyword if disabled in this language.
   if (AddResult == 0) return;
