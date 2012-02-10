@@ -179,6 +179,9 @@ class Parser : public CodeCompletionHandler {
   /// declaration is finished.
   DelayedCleanupPool TopLevelDeclCleanupPool;
 
+  /// Used for Eero off-side (Python-like) indentation tracking.
+  SmallVector<unsigned short, 48> indentationPositions; // TODO: 48 levels ok?
+
 public:
   Parser(Preprocessor &PP, Sema &Actions);
   ~Parser();
@@ -702,6 +705,10 @@ private:
     Tok.setIdentifierInfo(0);
   }
 
+  unsigned Column(const SourceLocation& Loc) {
+    return PP.getSourceManager().getExpansionColumnNumber(Loc);
+  }
+
   //===--------------------------------------------------------------------===//
   // Diagnostic Emission and Error recovery.
 
@@ -1218,6 +1225,10 @@ private:
   typedef SmallVector<LexedMethod*, 2> LateParsedObjCMethodContainer;
   LateParsedObjCMethodContainer LateParsedObjCMethods;
 
+  // For Eero, since parsing cannot be deferred
+  typedef SmallVector<Decl*, 2> ParsedObjCMethodContainer;
+  ParsedObjCMethodContainer ParsedObjCMethods;
+
   Decl *ParseObjCAtImplementationDeclaration(SourceLocation atLoc);
   DeclGroupPtrTy ParseObjCAtEndDeclaration(SourceRange atEnd);
   Decl *ParseObjCAtAliasDeclaration(SourceLocation atLoc);
@@ -1532,6 +1543,10 @@ private:
   StmtResult ParseObjCSynchronizedStmt(SourceLocation atLoc);
   StmtResult ParseObjCAutoreleasePoolStmt(SourceLocation atLoc);
 
+  //===--------------------------------------------------------------------===//
+  // Eero Statements
+
+  bool IsValidIndentation(unsigned short column);
 
   //===--------------------------------------------------------------------===//
   // C99 6.7: Declarations.
