@@ -726,7 +726,7 @@ StmtResult Parser::ParseCompoundStatement(ParsedAttributes &attrs,
                                           unsigned ScopeFlags) {
   //FIXME: Use attributes?
 
-  assert(Tok.is(tok::l_brace) && "Not a compount stmt!");
+  assert((Tok.is(tok::l_brace) || getLang().Eero) && "Not a compount stmt!");
 
   // Enter a scope to hold everything within the compound stmt.  Compound
   // statements can always hold declarations.
@@ -2036,7 +2036,7 @@ bool Parser::ParseAsmOperandsOpt(SmallVectorImpl<IdentifierInfo *> &Names,
 }
 
 Decl *Parser::ParseFunctionStatementBody(Decl *Decl, ParseScope &BodyScope) {
-  assert(Tok.is(tok::l_brace));
+  assert(Tok.is(tok::l_brace) || getLang().Eero);
   SourceLocation LBraceLoc = Tok.getLocation();
 
   if (PP.isCodeCompletionEnabled()) {
