@@ -1456,6 +1456,9 @@ private:
 
   ExprResult ParseBlockLiteralExpression();  // ^{...}
 
+  /// Eero-specific: parse and treat a nested function as a block.
+  ExprResult ParseNestedFunctionAsBlock(ParsingDeclSpec &DS,
+                                        ParsingDeclarator &D);
   //===--------------------------------------------------------------------===//
   // Objective-C Expressions
   ExprResult ParseObjCAtExpression(SourceLocation AtLocation);
