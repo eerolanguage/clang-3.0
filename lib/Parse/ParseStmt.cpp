@@ -929,6 +929,8 @@ bool Parser::ParseParenExprOrCondition(ExprResult &ExprResult,
                                        SourceLocation Loc,
                                        bool ConvertToBoolean) {
   BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (getLang().Eero && !InSystemHeader(Loc)) 
+    T.setOptional();
   T.consumeOpen();
 
   if (getLang().CPlusPlus)
@@ -974,7 +976,7 @@ StmtResult Parser::ParseIfStatement(ParsedAttributes &attrs) {
   SourceLocation IfLoc = ConsumeToken();  // eat the 'if'.
   const bool Eero = getLang().Eero && !InSystemHeader(IfLoc);
 
-  if (Tok.isNot(tok::l_paren)) {
+  if (Tok.isNot(tok::l_paren) && !getLang().Eero) {
     Diag(Tok, diag::err_expected_lparen_after) << "if";
     SkipUntil(tok::semi);
     return StmtError();
@@ -1125,7 +1127,9 @@ StmtResult Parser::ParseSwitchStatement(ParsedAttributes &attrs) {
   assert(Tok.is(tok::kw_switch) && "Not a switch stmt!");
   SourceLocation SwitchLoc = ConsumeToken();  // eat the 'switch'.
 
-  if (Tok.isNot(tok::l_paren)) {
+  const bool Eero = getLang().Eero && !InSystemHeader(SwitchLoc);
+
+  if (Tok.isNot(tok::l_paren) && !Eero) {
     Diag(Tok, diag::err_expected_lparen_after) << "switch";
     SkipUntil(tok::semi);
     return StmtError();
@@ -1188,7 +1192,7 @@ StmtResult Parser::ParseSwitchStatement(ParsedAttributes &attrs) {
 
   // Read the body statement.
   StmtResult Body;
-  if (!getLang().Eero || InSystemHeader(SwitchLoc)) {
+  if (!Eero) {
     Body = ParseStatement();
   } else {
     Body = ParseCompoundStatement(attrs);
@@ -1216,7 +1220,7 @@ StmtResult Parser::ParseWhileStatement(ParsedAttributes &attrs) {
   SourceLocation WhileLoc = Tok.getLocation();
   ConsumeToken();  // eat the 'while'.
 
-  if (Tok.isNot(tok::l_paren)) {
+  if (Tok.isNot(tok::l_paren) && !getLang().Eero) {
     Diag(Tok, diag::err_expected_lparen_after) << "while";
     SkipUntil(tok::semi);
     return StmtError();
@@ -1335,7 +1339,7 @@ StmtResult Parser::ParseDoStatement(ParsedAttributes &attrs) {
   }
   SourceLocation WhileLoc = ConsumeToken();
 
-  if (Tok.isNot(tok::l_paren)) {
+  if (Tok.isNot(tok::l_paren) && !getLang().Eero) {
     Diag(Tok, diag::err_expected_lparen_after) << "do/while";
     SkipUntil(tok::semi, false, true);
     return StmtError();
@@ -1343,6 +1347,8 @@ StmtResult Parser::ParseDoStatement(ParsedAttributes &attrs) {
 
   // Parse the parenthesized condition.
   BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (getLang().Eero && !InSystemHeader(WhileLoc)) 
+    T.setOptional();
   T.consumeOpen();
   ExprResult Cond = ParseExpression();
   T.consumeClose();
@@ -1380,7 +1386,9 @@ StmtResult Parser::ParseForStatement(ParsedAttributes &attrs) {
   assert(Tok.is(tok::kw_for) && "Not a for stmt!");
   SourceLocation ForLoc = ConsumeToken();  // eat the 'for'.
 
-  if (Tok.isNot(tok::l_paren)) {
+  const bool Eero = getLang().Eero && !InSystemHeader(ForLoc);
+
+  if (Tok.isNot(tok::l_paren) && !Eero) {
     Diag(Tok, diag::err_expected_lparen_after) << "for";
     SkipUntil(tok::semi);
     return StmtError();
@@ -1413,6 +1421,8 @@ StmtResult Parser::ParseForStatement(ParsedAttributes &attrs) {
   ParseScope ForScope(this, ScopeFlags);
 
   BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (Eero) 
+    T.setOptional();
   T.consumeOpen();
 
   ExprResult Value;
@@ -1592,7 +1602,7 @@ StmtResult Parser::ParseForStatement(ParsedAttributes &attrs) {
 
   // Read the body statement.
   StmtResult Body;
-  if (!getLang().Eero || InSystemHeader(ForLoc))
+  if (!Eero)
     Body = ParseStatement();
   else 
     Body = ParseCompoundStatement(attrs);

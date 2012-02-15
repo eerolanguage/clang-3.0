@@ -454,6 +454,7 @@ private:
     bool Cleanup;
     const unsigned MaxDepth;
     SourceLocation LOpen, LClose;
+    bool optional; // for Eero optional delimiters
   
     void assignClosingDelimiter() {
       switch (Kind) {
@@ -468,7 +469,7 @@ private:
 
   public:
     BalancedDelimiterTracker(Parser& p, tok::TokenKind k) 
-      : Kind(k), P(p), Cleanup(false), MaxDepth(256) {
+      : Kind(k), P(p), Cleanup(false), MaxDepth(256), optional(false) {
       assignClosingDelimiter();
     }
 
@@ -476,6 +477,8 @@ private:
       if (Cleanup)
         P.QuantityTracker.pop(Kind);
     }
+    
+    void setOptional() { optional = true; } // for Eero optional delimiters
 
     SourceLocation getOpenLocation() const { return LOpen; }
     SourceLocation getCloseLocation() const { return LClose; }
