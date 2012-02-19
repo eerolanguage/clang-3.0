@@ -479,6 +479,7 @@ private:
     }
     
     void setOptional() { optional = true; } // for Eero optional delimiters
+    bool isOptional()  { return optional; } //
 
     SourceLocation getOpenLocation() const { return LOpen; }
     SourceLocation getCloseLocation() const { return LClose; }
