@@ -937,8 +937,6 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
                                   tok::TokenKind mType,
                                   tok::ObjCKeywordKind MethodImplKind,
                                   bool MethodDefinition) {
-  const bool Eero = getLang().Eero && !InSystemHeader(mLoc);
-
   ParsingDeclRAIIObject PD(*this);
 
   if (Tok.is(tok::code_completion)) {
@@ -1076,7 +1074,8 @@ Decl *Parser::ParseObjCMethodDecl(SourceLocation mLoc,
       return 0;
     }
     
-    if (Eero && Tok.isAtStartOfLine()) { // TODO: this will change
+    if (getLang().Eero && !PP.isInSystemHeader() &&
+        Tok.isAtStartOfLine()) { // TODO: this will change
       break;
     }
 

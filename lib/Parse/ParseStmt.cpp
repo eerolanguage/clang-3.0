@@ -241,7 +241,7 @@ Retry:
   case tok::l_brace:                // C99 6.8.2: compound-statement
     if (getLang().Eero && 
         Tok.getLength() != 0 && // if not an inserted left brace
-        !InSystemHeader(Tok.getLocation())) {
+        !PP.isInSystemHeader()) {
       Diag(Tok, diag::err_not_allowed) << "'{'";
       ConsumeAnyToken(); // eat it and move on
       return StmtError();
@@ -764,7 +764,7 @@ bool Parser::IsValidIndentation(unsigned short column) {
 /// consume the '}' at the end of the block.  It does not manipulate the scope
 /// stack.
 StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
-  const bool Eero = getLang().Eero && !InSystemHeader(Tok.getLocation());
+  const bool Eero = getLang().Eero && !PP.isInSystemHeader();
   if (Eero) {
     if (Tok.isAtStartOfLine()) {
       InsertToken(tok::l_brace);
@@ -941,7 +941,7 @@ bool Parser::ParseParenExprOrCondition(ExprResult &ExprResult,
                                        SourceLocation Loc,
                                        bool ConvertToBoolean) {
   BalancedDelimiterTracker T(*this, tok::l_paren);
-  if (getLang().Eero && !InSystemHeader(Loc)) 
+  if (getLang().Eero && !PP.isInSystemHeader())
     T.setOptional();
   T.consumeOpen();
 
@@ -988,7 +988,7 @@ StmtResult Parser::ParseIfStatement(ParsedAttributes &attrs) {
 
   assert(Tok.is(tok::kw_if) && "Not an if stmt!");
   SourceLocation IfLoc = ConsumeToken();  // eat the 'if'.
-  const bool Eero = getLang().Eero && !InSystemHeader(IfLoc);
+  const bool Eero = getLang().Eero && !PP.isInSystemHeader();
 
   if (Tok.isNot(tok::l_paren) && !getLang().Eero) {
     Diag(Tok, diag::err_expected_lparen_after) << "if";
@@ -1141,7 +1141,7 @@ StmtResult Parser::ParseSwitchStatement(ParsedAttributes &attrs) {
   assert(Tok.is(tok::kw_switch) && "Not a switch stmt!");
   SourceLocation SwitchLoc = ConsumeToken();  // eat the 'switch'.
 
-  const bool Eero = getLang().Eero && !InSystemHeader(SwitchLoc);
+  const bool Eero = getLang().Eero && !PP.isInSystemHeader();
 
   if (Tok.isNot(tok::l_paren) && !Eero) {
     Diag(Tok, diag::err_expected_lparen_after) << "switch";
@@ -1286,7 +1286,7 @@ StmtResult Parser::ParseWhileStatement(ParsedAttributes &attrs) {
 
   // Read the body statement.
   StmtResult Body;
-  if (!getLang().Eero || InSystemHeader(WhileLoc))
+  if (!getLang().Eero || PP.isInSystemHeader())
     Body = ParseStatement();
   else    
     Body = ParseCompoundStatement(attrs);
@@ -1335,7 +1335,7 @@ StmtResult Parser::ParseDoStatement(ParsedAttributes &attrs) {
 
   // Read the body statement.
   StmtResult Body;
-  if (!getLang().Eero || InSystemHeader(DoLoc))
+  if (!getLang().Eero || PP.isInSystemHeader())
     Body = ParseStatement();
   else
     Body = ParseCompoundStatement(attrs);
@@ -1361,7 +1361,7 @@ StmtResult Parser::ParseDoStatement(ParsedAttributes &attrs) {
 
   // Parse the parenthesized condition.
   BalancedDelimiterTracker T(*this, tok::l_paren);
-  if (getLang().Eero && !InSystemHeader(WhileLoc)) 
+  if (getLang().Eero && !PP.isInSystemHeader())
     T.setOptional();
   T.consumeOpen();
   ExprResult Cond = ParseExpression();
@@ -1400,7 +1400,7 @@ StmtResult Parser::ParseForStatement(ParsedAttributes &attrs) {
   assert(Tok.is(tok::kw_for) && "Not a for stmt!");
   SourceLocation ForLoc = ConsumeToken();  // eat the 'for'.
 
-  const bool Eero = getLang().Eero && !InSystemHeader(ForLoc);
+  const bool Eero = getLang().Eero && !PP.isInSystemHeader();
 
   if (Tok.isNot(tok::l_paren) && !Eero) {
     Diag(Tok, diag::err_expected_lparen_after) << "for";

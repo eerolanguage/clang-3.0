@@ -628,7 +628,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
   case tok::kw_using:
   case tok::kw_namespace:
   case tok::kw_typedef:
-    if (getLang().Eero && !InSystemHeader(Tok.getLocation()) &&
+    if (getLang().Eero && !PP.isInSystemHeader() &&
         GetLookAheadToken(1).is(tok::identifier) && 
         GetLookAheadToken(2).is(tok::ellipsis) && 
         GetLookAheadToken(3).is(tok::ellipsis)) {
@@ -756,7 +756,7 @@ bool Parser::isDeclarationAfterDeclarator() {
 bool Parser::isStartOfFunctionDefinition(const ParsingDeclarator &Declarator) {
   assert(Declarator.isFunctionDeclarator() && "Isn't a function declarator");
   // Check for Eero function definition or declaration
-  if (getLang().Eero && !InSystemHeader(Tok.getLocation())) {
+  if (getLang().Eero && !PP.isInSystemHeader()) {
     if (!Tok.isAtStartOfLine()) {
       Diag(Tok, diag::err_expected) << "newline";
       while (!Tok.isAtStartOfLine()) // flush the rest of the
@@ -910,7 +910,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   if (FTI.isKNRPrototype())
     ParseKNRParamDeclarations(D);
 
-  if (getLang().Eero && !InSystemHeader(Tok.getLocation())) {
+  if (getLang().Eero && !PP.isInSystemHeader()) {
     if (Tok.isAtStartOfLine()) {
       SourceLocation FuncStartLoc = D.getDeclSpec().getSourceRange().getBegin();
       indentationPositions.push_back(Column(FuncStartLoc));
