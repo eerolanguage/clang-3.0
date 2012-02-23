@@ -1527,7 +1527,7 @@ Parser::ParseObjCAtEndDeclaration(SourceRange atEnd) {
   ConsumeToken(); // the "end" identifier
   SmallVector<Decl *, 8> DeclsInGroup;
   Actions.DefaultSynthesizeProperties(getCurScope(), ObjCImpDecl);
-  if (!getLang().Eero) { // parse now
+  if (!getLang().OffSideRule) { // parse now
     for (size_t i = 0; i < LateParsedObjCMethods.size(); ++i) {
       Decl *D = ParseLexedObjCMethodDefs(*LateParsedObjCMethods[i]);
       DeclsInGroup.push_back(D);
@@ -1730,7 +1730,7 @@ Parser::ParseObjCSynchronizedStmt(SourceLocation atLoc) {
   }
 
   // Require a compound statement.
-  if (Tok.isNot(tok::l_brace) && !getLang().Eero) {
+  if (Tok.isNot(tok::l_brace) && !getLang().OffSideRule) {
     if (!operand.isInvalid())
       Diag(Tok, diag::err_expected_lbrace);
     return StmtError();
@@ -1771,7 +1771,7 @@ StmtResult Parser::ParseObjCTryStmt(SourceLocation atLoc) {
   bool catch_or_finally_seen = false;
 
   ConsumeToken(); // consume try
-  if (Tok.isNot(tok::l_brace) && !getLang().Eero) {
+  if (Tok.isNot(tok::l_brace) && !getLang().OffSideRule) {
     Diag(Tok, diag::err_expected_lbrace);
     return StmtError();
   }
@@ -1828,7 +1828,7 @@ StmtResult Parser::ParseObjCTryStmt(SourceLocation atLoc) {
           SkipUntil(tok::r_paren, true, false);
 
         StmtResult CatchBody(true);
-        if (Tok.is(tok::l_brace) || getLang().Eero)
+        if (Tok.is(tok::l_brace) || getLang().OffSideRule)
           CatchBody = ParseCompoundStatementBody();
         else
           Diag(Tok, diag::err_expected_lbrace);
@@ -1854,7 +1854,7 @@ StmtResult Parser::ParseObjCTryStmt(SourceLocation atLoc) {
       ParseScope FinallyScope(this, Scope::DeclScope);
 
       StmtResult FinallyBody(true);
-      if (Tok.is(tok::l_brace) || getLang().Eero)
+      if (Tok.is(tok::l_brace) || getLang().OffSideRule)
         FinallyBody = ParseCompoundStatementBody();
       else
         Diag(Tok, diag::err_expected_lbrace);
@@ -1882,7 +1882,7 @@ StmtResult Parser::ParseObjCTryStmt(SourceLocation atLoc) {
 StmtResult
 Parser::ParseObjCAutoreleasePoolStmt(SourceLocation atLoc) {
   ConsumeToken(); // consume autoreleasepool
-  if (Tok.isNot(tok::l_brace) && !getLang().Eero) {
+  if (Tok.isNot(tok::l_brace) && !getLang().OffSideRule) {
     Diag(Tok, diag::err_expected_lbrace);
     return StmtError();
   }
@@ -1902,7 +1902,7 @@ Parser::ParseObjCAutoreleasePoolStmt(SourceLocation atLoc) {
 ///   objc-method-def: objc-method-proto ';'[opt] '{' body '}'
 ///
 Decl *Parser::ParseObjCMethodDefinition() {
-  if (getLang().Eero) {
+  if (getLang().OffSideRule) {
     indentationPositions.push_back(Column(Tok.getLocation()));
   }
   Decl *MDecl = ParseObjCMethodPrototype();
@@ -1910,7 +1910,7 @@ Decl *Parser::ParseObjCMethodDefinition() {
   PrettyDeclStackTraceEntry CrashInfo(Actions, MDecl, Tok.getLocation(),
                                       "parsing Objective-C method");
 
-  if (getLang().Eero) { // do this the pre-3.0 way, since we can't defer
+  if (getLang().OffSideRule) { // do this the pre-3.0 way, since we can't defer
     SourceLocation BodyStartLoc = Tok.getLocation();
 
     // Allow the rest of sema to find private method decl implementations.

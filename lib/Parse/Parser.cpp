@@ -757,8 +757,8 @@ bool Parser::isDeclarationAfterDeclarator() {
 /// declarator, indicates the start of a function definition.
 bool Parser::isStartOfFunctionDefinition(const ParsingDeclarator &Declarator) {
   assert(Declarator.isFunctionDeclarator() && "Isn't a function declarator");
-  // Check for Eero function definition or declaration
-  if (getLang().Eero && !PP.isInSystemHeader()) {
+  // Check for function definition or declaration when using off-side rule
+  if (getLang().OffSideRule && !PP.isInSystemHeader()) {
     if (!Tok.isAtStartOfLine()) {
       Diag(Tok, diag::err_expected) << "newline";
       while (!Tok.isAtStartOfLine()) // flush the rest of the
@@ -913,7 +913,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   if (FTI.isKNRPrototype())
     ParseKNRParamDeclarations(D);
 
-  if (getLang().Eero && !PP.isInSystemHeader()) {
+  if (getLang().OffSideRule && !PP.isInSystemHeader()) {
     if (Tok.isAtStartOfLine()) {
       SourceLocation FuncStartLoc = D.getDeclSpec().getSourceRange().getBegin();
       indentationPositions.push_back(Column(FuncStartLoc));

@@ -239,7 +239,7 @@ Retry:
     return ParseDefaultStatement(attrs);
 
   case tok::l_brace:                // C99 6.8.2: compound-statement
-    if (getLang().Eero && 
+    if (getLang().OffSideRule && 
         Tok.getLength() != 0 && // if not an inserted left brace
         !PP.isInSystemHeader()) {
       Diag(Tok, diag::err_not_allowed) << "'{'";
@@ -622,9 +622,9 @@ StmtResult Parser::ParseCaseStatement(ParsedAttributes &attrs, bool MissingCase,
   // If we found a non-case statement, start by parsing it.
   StmtResult SubStmt;
 
-  if (getLang().Eero && !PP.isInSystemHeader()) {
+  if (getLang().OffSideRule && !PP.isInSystemHeader()) {
     SubStmt = ParseCompoundStatement(attrs);
-    if (!SubStmt.isInvalid())
+    if (!SubStmt.isInvalid() && getLang().Eero)
       SubStmt = Actions.AddBreakToCaseOrDefaultBlock(SubStmt.take());
   } else
   if (Tok.isNot(tok::r_brace)) {
@@ -678,9 +678,9 @@ StmtResult Parser::ParseDefaultStatement(ParsedAttributes &attrs) {
   }
 
   StmtResult SubStmt;
-  if (getLang().Eero && !PP.isInSystemHeader()) {
+  if (getLang().OffSideRule && !PP.isInSystemHeader()) {
     SubStmt = ParseCompoundStatement(attrs);
-    if (!SubStmt.isInvalid())
+    if (!SubStmt.isInvalid() && getLang().Eero)
       SubStmt = Actions.AddBreakToCaseOrDefaultBlock(SubStmt.take());
   } else  // Diagnose the common error "switch (X) {... default: }", which is not valid.
   if (Tok.is(tok::r_brace)) {
@@ -735,7 +735,8 @@ StmtResult Parser::ParseCompoundStatement(ParsedAttributes &attrs,
                                           unsigned ScopeFlags) {
   //FIXME: Use attributes?
 
-  assert((Tok.is(tok::l_brace) || getLang().Eero) && "Not a compount stmt!");
+  assert((Tok.is(tok::l_brace) || getLang().OffSideRule) && 
+         "Not a compount stmt!");
 
   // Enter a scope to hold everything within the compound stmt.  Compound
   // statements can always hold declarations.
@@ -745,7 +746,7 @@ StmtResult Parser::ParseCompoundStatement(ParsedAttributes &attrs,
   return ParseCompoundStatementBody(isStmtExpr);
 }
 
-/// For Eero off-side rule support. Determine if an indentation level
+/// For off-side rule support. Determine if an indentation level
 /// is valid (previously established) for the current scope.
 bool Parser::IsValidIndentation(unsigned short column) {
   if (column < indentationPositions.front()) // to the left of first indent
@@ -764,8 +765,7 @@ bool Parser::IsValidIndentation(unsigned short column) {
 /// consume the '}' at the end of the block.  It does not manipulate the scope
 /// stack.
 StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
-  const bool Eero = getLang().Eero && !PP.isInSystemHeader();
-  if (Eero) {
+  if (getLang().OffSideRule && !PP.isInSystemHeader()) {
     if (Tok.isAtStartOfLine()) {
       InsertToken(tok::l_brace);
     } else {
@@ -815,7 +815,7 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
       Stmts.push_back(R.release());
   }
 
-  bool newScope = true; // Eero, for off-side rule support
+  bool newScope = true; // for off-side rule support
 
   while (Tok.isNot(tok::r_brace) && Tok.isNot(tok::eof)) {
     if (Tok.is(tok::annot_pragma_unused)) {
@@ -829,7 +829,8 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
       continue;
     }
 
-    if (Eero && Tok.isAtStartOfLine()) { // main off-side rule logic
+    if (getLang().OffSideRule && !PP.isInSystemHeader() && 
+        Tok.isAtStartOfLine()) { // main off-side rule logic
       unsigned column = Column(Tok.getLocation());      
       if (!indentationPositions.empty()) {
         if (newScope && column > indentationPositions.back()) {
@@ -904,7 +905,7 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
   }
 
   // We broke out of the while loop because we found a '}' or EOF.
-  if (Eero && !indentationPositions.empty()) { // using off-side rule
+  if (getLang().OffSideRule && !indentationPositions.empty()) {
     indentationPositions.pop_back();
     if (Tok.is(tok::eof)) { // exit compound body 
       InsertToken(tok::r_brace);
@@ -988,7 +989,6 @@ StmtResult Parser::ParseIfStatement(ParsedAttributes &attrs) {
 
   assert(Tok.is(tok::kw_if) && "Not an if stmt!");
   SourceLocation IfLoc = ConsumeToken();  // eat the 'if'.
-  const bool Eero = getLang().Eero && !PP.isInSystemHeader();
 
   if (Tok.isNot(tok::l_paren) && !getLang().Eero) {
     Diag(Tok, diag::err_expected_lparen_after) << "if";
@@ -1044,7 +1044,7 @@ StmtResult Parser::ParseIfStatement(ParsedAttributes &attrs) {
   // Read the 'then' stmt.
   SourceLocation ThenStmtLoc = Tok.getLocation();
   StmtResult ThenStmt;
-  if (!Eero)
+  if (!getLang().OffSideRule || PP.isInSystemHeader())
     ThenStmt = ParseStatement();
   else
     ThenStmt = ParseCompoundStatement(attrs);
@@ -1057,11 +1057,12 @@ StmtResult Parser::ParseIfStatement(ParsedAttributes &attrs) {
   SourceLocation ElseStmtLoc;
   StmtResult ElseStmt;
 
-  // For Eero, looked for "else"s associated with previous "if"s. For other
-  // languages, process all of them.
+  // For off-side rule, look for "else"s associated with previous "if"s.
+  // Otherwise, process all of them.
   bool ProcessElseStatement;
   if (Tok.is(tok::kw_else) &&
-      (!Eero || Column(Tok.getLocation()) == indentationPositions.back())) {
+      ((!getLang().OffSideRule || PP.isInSystemHeader()) || 
+       Column(Tok.getLocation()) == indentationPositions.back())) {
     ProcessElseStatement = true;
   } else {
     ProcessElseStatement = false;
@@ -1083,7 +1084,7 @@ StmtResult Parser::ParseIfStatement(ParsedAttributes &attrs) {
     ParseScope InnerScope(this, Scope::DeclScope,
                           C99orCXX && Tok.isNot(tok::l_brace));
 
-    if (Eero) {
+    if (getLang().OffSideRule && !PP.isInSystemHeader()) {
       if (Tok.isAtStartOfLine()) { // line break after "else"
         ElseStmt = ParseCompoundStatement(attrs);
         ProcessElseStatement = false;
@@ -1141,9 +1142,7 @@ StmtResult Parser::ParseSwitchStatement(ParsedAttributes &attrs) {
   assert(Tok.is(tok::kw_switch) && "Not a switch stmt!");
   SourceLocation SwitchLoc = ConsumeToken();  // eat the 'switch'.
 
-  const bool Eero = getLang().Eero && !PP.isInSystemHeader();
-
-  if (Tok.isNot(tok::l_paren) && !Eero) {
+  if (Tok.isNot(tok::l_paren) && (!getLang().Eero || PP.isInSystemHeader())) {
     Diag(Tok, diag::err_expected_lparen_after) << "switch";
     SkipUntil(tok::semi);
     return StmtError();
@@ -1206,7 +1205,7 @@ StmtResult Parser::ParseSwitchStatement(ParsedAttributes &attrs) {
 
   // Read the body statement.
   StmtResult Body;
-  if (!Eero) {
+  if (!getLang().OffSideRule || PP.isInSystemHeader()) {
     Body = ParseStatement();
   } else {
     Body = ParseCompoundStatement(attrs);
@@ -1286,7 +1285,7 @@ StmtResult Parser::ParseWhileStatement(ParsedAttributes &attrs) {
 
   // Read the body statement.
   StmtResult Body;
-  if (!getLang().Eero || PP.isInSystemHeader())
+  if (!getLang().OffSideRule || PP.isInSystemHeader())
     Body = ParseStatement();
   else    
     Body = ParseCompoundStatement(attrs);
@@ -1335,7 +1334,7 @@ StmtResult Parser::ParseDoStatement(ParsedAttributes &attrs) {
 
   // Read the body statement.
   StmtResult Body;
-  if (!getLang().Eero || PP.isInSystemHeader())
+  if (!getLang().OffSideRule || PP.isInSystemHeader())
     Body = ParseStatement();
   else
     Body = ParseCompoundStatement(attrs);
@@ -1400,9 +1399,7 @@ StmtResult Parser::ParseForStatement(ParsedAttributes &attrs) {
   assert(Tok.is(tok::kw_for) && "Not a for stmt!");
   SourceLocation ForLoc = ConsumeToken();  // eat the 'for'.
 
-  const bool Eero = getLang().Eero && !PP.isInSystemHeader();
-
-  if (Tok.isNot(tok::l_paren) && !Eero) {
+  if (Tok.isNot(tok::l_paren) && (!getLang().Eero || PP.isInSystemHeader())) {
     Diag(Tok, diag::err_expected_lparen_after) << "for";
     SkipUntil(tok::semi);
     return StmtError();
@@ -1435,7 +1432,7 @@ StmtResult Parser::ParseForStatement(ParsedAttributes &attrs) {
   ParseScope ForScope(this, ScopeFlags);
 
   BalancedDelimiterTracker T(*this, tok::l_paren);
-  if (Eero) 
+  if (getLang().Eero && !PP.isInSystemHeader())
     T.setOptional();
   T.consumeOpen();
 
@@ -1616,7 +1613,7 @@ StmtResult Parser::ParseForStatement(ParsedAttributes &attrs) {
 
   // Read the body statement.
   StmtResult Body;
-  if (!Eero)
+  if (!getLang().OffSideRule || PP.isInSystemHeader())
     Body = ParseStatement();
   else 
     Body = ParseCompoundStatement(attrs);
@@ -2073,7 +2070,7 @@ bool Parser::ParseAsmOperandsOpt(SmallVectorImpl<IdentifierInfo *> &Names,
 }
 
 Decl *Parser::ParseFunctionStatementBody(Decl *Decl, ParseScope &BodyScope) {
-  assert(Tok.is(tok::l_brace) || getLang().Eero);
+  assert(Tok.is(tok::l_brace) || getLang().OffSideRule);
   SourceLocation LBraceLoc = Tok.getLocation();
 
   if (PP.isCodeCompletionEnabled()) {
