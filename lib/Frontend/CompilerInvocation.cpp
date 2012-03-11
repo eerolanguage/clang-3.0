@@ -1505,6 +1505,7 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
     Opts.OptionalSemicolons = 1;
     Opts.OffSideRule = 1;
     Opts.UnderscoresInNumerals = 1;
+    Opts.CompactBlocks = 1;
   }
 
   if (LangStd == LangStandard::lang_unspecified) {
