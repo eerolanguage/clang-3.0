@@ -971,10 +971,8 @@ Parser::DeclGroupPtrTy Parser::ParseSimpleDeclaration(StmtVector &Stmts,
   
   // C99 6.7.2.3p6: Handle "struct-or-union identifier;", "enum { X };"
   // declaration-specifiers init-declarator-list[opt] ';'
-  if (Tok.is(tok::semi) || 
-      (getLang().OptionalSemicolons && !PP.isInSystemHeader() &&
-       Tok.isAtStartOfLine())) {
-    if (Tok.is(tok::semi) && RequireSemi) ConsumeToken();
+  if (Tok.is(tok::semi)) {
+    if (RequireSemi) ConsumeToken();
     Decl *TheDecl = Actions.ParsedFreeStandingDeclSpec(getCurScope(), AS_none,
                                                        DS);
     DS.complete(TheDecl);
@@ -1611,12 +1609,23 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
     DS.SetRangeEnd(Tok.getLocation());
   }
   
+  bool firstPass = true;
   while (1) {
     bool isInvalid = false;
     const char *PrevSpec = 0;
     unsigned DiagID = 0;
 
     SourceLocation Loc = Tok.getLocation();
+
+    if (getLang().OptionalSemicolons && 
+        !firstPass && 
+        Tok.isAtStartOfLine() && 
+        !PP.isInSystemHeader()) {
+      InsertToken(tok::semi); // not great, but most reliable way to do this
+    }
+
+    if (firstPass)
+      firstPass = false;
 
     switch (Tok.getKind()) {
     default:
@@ -3915,6 +3924,8 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       Diag(Tok, diag::err_expected_ident_lparen);
     D.SetIdentifier(0, Tok.getLocation());
     D.setInvalidType(true);
+    if (getLang().OptionalSemicolons && !PP.isInSystemHeader())
+      Tok.setKind(tok::eof); // gets stuck otherwise
   }
 
  PastIdentifier:
@@ -3925,7 +3936,9 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
   if (D.getIdentifier())
     MaybeParseCXX0XAttributes(D);
 
-  while (1) {
+  while (!getLang().OptionalSemicolons || 
+         PP.isInSystemHeader() ||    
+         !Tok.isAtStartOfLine()) { 
     if (Tok.is(tok::l_paren)) {
       // The paren may be part of a C++ direct initializer, eg. "int x(1);".
       // In such a case, check if we actually have a function declarator; if it
